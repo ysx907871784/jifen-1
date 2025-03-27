@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学生积分系统</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        .section {
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            padding: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            border: 1px solid #ccc;
+            padding: 8px;
+            text-align: left;
+        }
+
+        input,
+        button {
+            margin: 5px;
+            padding: 8px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>学生积分系统</h1>
+
+    <!-- 学生管理 -->
+    <div class="section">
+        <h2>学生管理</h2>
+        <input type="text" id="studentName" placeholder="学生姓名">
+        <button onclick="addStudent()">添加学生</button>
+        <table id="studentTable">
+            <thead>
+                <tr>
+                    <th>学生 ID</th>
+                    <th>学生姓名</th>
+                    <th>个人积分</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <!-- 小组管理 -->
+    <div class="section">
+        <h2>小组管理</h2>
+        <input type="text" id="groupName" placeholder="小组名称">
+        <button onclick="addGroup()">添加小组</button>
+        <table id="groupTable">
+            <thead>
+                <tr>
+                    <th>小组 ID</th>
+                    <th>小组名称</th>
+                    <th>初始积分</th>
+                    <th>当前积分</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <!-- 学生 - 小组关联 -->
+    <div class="section">
+        <h2>学生 - 小组关联</h2>
+        <select id="studentSelect"></select>
+        <select id="groupSelect"></select>
+        <button onclick="assignStudentToGroup()">关联学生到小组</button>
+    </div>
+
+    <!-- 学生个人积分管理 -->
+    <div class="section">
+        <h2>学生个人积分管理</h2>
+        <select id="studentSelectForPoints"></select>
+        <input type="number" id="personalPointsChange" placeholder="个人积分变动值">
+        <input type="text" id="personalChangeReason" placeholder="变动原因">
+        <button onclick="updatePersonalPoints()">更新个人积分</button>
+    </div>
+
+    <!-- 积分管理 -->
+    <div class="section">
+        <h2>小组积分管理</h2>
+        <select id="groupSelectForPoints"></select>
+        <input type="number" id="pointsChange" placeholder="积分变动值">
+        <input type="text" id="changeReason" placeholder="变动原因">
+        <button onclick="updatePoints()">更新积分</button>
+    </div>
+
+    <script>
+        // 模拟数据库数据
+        let students = [];
+        let groups = [];
+        let studentGroupRelations = [];
+        let pointRecords = [];
+        let personalPointRecords = [];
+
+        // 添加学生
+        function addStudent() {
+            const studentName = document.getElementById('studentName').value;
+            if (studentName) {
+                const newStudent = {
+                    id: students.length + 1,
+                    name: studentName,
+                    personalPoints: 0
+                };
+                students.push(newStudent);
+                updateStudentTable();
+                updateStudentSelect();
+                updateStudentSelectForPoints();
+                document.getElementById('studentName').value = '';
+            }
+        }
+
+        // 更新学生表格
+        function updateStudentTable() {
+            const tableBody = document.getElementById('studentTable').getElementsByTagName('tbody')[0];
+            tableBody.innerHTML = '';
+            students.forEach(student => {
+                const row = tableBody.insertRow();
+                row.insertCell(0).textContent = student.id;
+                row.insertCell(1).textContent = student.name;
+                row.insertCell(2).textContent = student.personalPoints;
+                const actionCell = row.insertCell(3);
+                const increaseButton = document.createElement('button');
+                increaseButton.textContent = '增加积分';
+                increaseButton.onclick = () => updatePersonalPointsByButton(student.id, 1, '手动增加');
+                actionCell.appendChild(increaseButton);
+                const decreaseButton = document.createElement('button');
+                decreaseButton.textContent = '减少积分';
+                decreaseButton.onclick = () => updatePersonalPointsByButton(student.id, -1, '手动减少');
+                actionCell.appendChild(decreaseButton);
+            });
+        }
+
+        // 更新学生选择框
+        function updateStudentSelect() {
+            const select = document.getElementById('studentSelect');
+            select.innerHTML = '';
+            students.forEach(student => {
+                const option = document.createElement('option');
+                option.value = student.id;
+                option.textContent = student.name;
+                select.appendChild(option);
+            });
+        }
+
+        // 更新学生积分选择框
+        function updateStudentSelectForPoints() {
+            const select = document.getElementById('studentSelectForPoints');
+            select.innerHTML = '';
+            students.forEach(student => {
+                const option = document.createElement('option');
+                option.value = student.id;
+                option.textContent = student.name;
+                select.appendChild(option);
+            });
+        }
+
+        // 添加小组
+        function addGroup() {
+            const groupName = document.getElementById('groupName').value;
+            if (groupName) {
+                const newGroup = {
+                    id: groups.length + 1,
+                    name: groupName,
+                    initialPoints: 100,
+                    currentPoints: 100
+                };
+                groups.push(newGroup);
+                updateGroupTable();
+                updateGroupSelect();
+                document.getElementById('groupName').value = '';
+            }
+        }
+
+        // 更新小组表格
+        function updateGroupTable() {
+            const tableBody = document.getElementById('groupTable').getElementsByTagName('tbody')[0];
+            tableBody.innerHTML = '';
+            groups.forEach(group => {
+                const row = tableBody.insertRow();
+                row.insertCell(0).textContent = group.id;
+                row.insertCell(1).textContent = group.name;
+                row.insertCell(2).textContent = group.initialPoints;
+                row.insertCell(3).textContent = group.currentPoints;
+                const actionCell = row.insertCell(4);
+                const increaseButton = document.createElement('button');
+                increaseButton.textContent = '增加积分';
+                increaseButton.onclick = () => updateGroupPoints(group.id, 1, '手动增加');
+                actionCell.appendChild(increaseButton);
+                const decreaseButton = document.createElement('button');
+                decreaseButton.textContent = '减少积分';
+                decreaseButton.onclick = () => updateGroupPoints(group.id, -1, '手动减少');
+                actionCell.appendChild(decreaseButton);
+            });
+        }
+
+        // 更新小组选择框
+        function updateGroupSelect() {
+            const select1 = document.getElementById('groupSelect');
+            const select2 = document.getElementById('groupSelectForPoints');
+            select1.innerHTML = '';
+            select2.innerHTML = '';
+            groups.forEach(group => {
+                const option1 = document.createElement('option');
+                option1.value = group.id;
+                option1.textContent = group.name;
+                select1.appendChild(option1);
+
+                const option2 = document.createElement('option');
+                option2.value = group.id;
+                option2.textContent = group.name;
+                select2.appendChild(option2);
+            });
+        }
+
+        // 关联学生到小组
+        function assignStudentToGroup() {
+            const studentId = parseInt(document.getElementById('studentSelect').value);
+            const groupId = parseInt(document.getElementById('groupSelect').value);
+            const relation = {
+                studentId: studentId,
+                groupId: groupId
+            };
+            studentGroupRelations.push(relation);
+        }
+
+        // 更新小组积分
+        function updateGroupPoints(groupId, pointsChange, reason) {
+            const group = groups.find(g => g.id === groupId);
+            if (group) {
+                group.currentPoints += pointsChange;
+                const record = {
+                    groupId: groupId,
+                    pointsChange: pointsChange,
+                    reason: reason,
+                    date: new Date()
+                };
+                pointRecords.push(record);
+                updateGroupTable();
+            }
+        }
+
+        // 手动更新小组积分
+        function updatePoints() {
+            const groupId = parseInt(document.getElementById('groupSelectForPoints').value);
+            const pointsChange = parseInt(document.getElementById('pointsChange').value);
+            const changeReason = document.getElementById('changeReason').value;
+            updateGroupPoints(groupId, pointsChange, changeReason);
+            document.getElementById('pointsChange').value = '';
+            document.getElementById('changeReason').value = '';
+        }
+
+        // 更新学生个人积分
+        function updatePersonalPoints() {
+            const studentId = parseInt(document.getElementById('studentSelectForPoints').value);
+            const pointsChange = parseInt(document.getElementById('personalPointsChange').value);
+            const changeReason = document.getElementById('personalChangeReason').value;
+            updatePersonalPointsByButton(studentId, pointsChange, changeReason);
+            document.getElementById('personalPointsChange').value = '';
+            document.getElementById('personalChangeReason').value = '';
+        }
+
+        // 通过按钮更新学生个人积分
+        function updatePersonalPointsByButton(studentId, pointsChange, reason) {
+            const student = students.find(s => s.id === studentId);
+            if (student) {
+                student.personalPoints += pointsChange;
+                const record = {
+                    studentId: studentId,
+                    pointsChange: pointsChange,
+                    reason: reason,
+                    date: new Date()
+                };
+                personalPointRecords.push(record);
+                updateStudentTable();
+            }
+        }
+
+        // 初始化页面
+        updateStudentTable();
+        updateGroupTable();
+        updateStudentSelect();
+        updateGroupSelect();
+        updateStudentSelectForPoints();
+    </script>
+</body>
+
+</html>    
